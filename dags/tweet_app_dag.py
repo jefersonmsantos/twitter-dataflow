@@ -8,6 +8,7 @@ import pymysql
 from sqlalchemy import create_engine
 import os
 
+
 #Argumentos default
 default_args={
     "owner":"Jeferson Machado Santos",
@@ -36,9 +37,7 @@ dag = DAG(
     schedule_interval = timedelta(minutes = 5)
 )
 
-
-#Consultar Twitter API e salvar arquivo txt. Passar nome do arquivo adiante
-def consult_tweet_api():
+def tweet_api_connection():
     API_Key = os.environ['API_Key']
     API_Secret_key = os.environ['API_Secret_key']
     access_token = os.environ['access_token']
@@ -50,7 +49,12 @@ def consult_tweet_api():
 
     #construir instância api
     api = tweepy.API(auth, wait_on_rate_limit=True,wait_on_rate_limit_notify=True)
+    return api
 
+#Consultar Twitter API e salvar arquivo txt. Passar nome do arquivo adiante
+def consult_tweet_api():
+    
+    api = tweet_api_connection()
 
     keyword = "'NETFLIX' OR 'HBOGO' OR 'DISNEYPLUS' OR 'DISNEY+' OR 'GLOBOPLAY' OR 'AMAZON PRIME' OR 'PRIME VIDEO'"
     brasil_geo_code = api.geo_search(query="Brazil", granularity="country")[0].id
@@ -58,7 +62,7 @@ def consult_tweet_api():
     data_agora = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     out = open(f"/usr/local/airflow/data/collected_tweets_{data_agora}.txt","w")
 
-    for tweet in tweepy.Cursor(api.search,
+    cursor = tweepy.Cursor(api.search,
                             q='{} place:{}'.format(keyword, brasil_geo_code), 
                             #q=keyword,  
                             tweet_mode='extended',
@@ -66,7 +70,9 @@ def consult_tweet_api():
                             result_type="recent",
                             lang='pt',
                             include_entities=True,
-                            include_rts=False).items(2000):
+                            include_rts=False).items(2000)
+
+    for tweet in cursor:
         
         itemstring=json.dumps(tweet._json)
         out.write(itemstring + '\n')

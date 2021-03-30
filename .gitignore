@@ -24,6 +24,7 @@ sftp-config.json
 
 # Python
 __pycache__
+.ipynb
 
 #Envfile
 .env
